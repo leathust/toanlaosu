@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Toán Lão Sư — Project Management Board</title>
+    <style>
+        :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; background: #f5f7fb; color: #172033; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 24px; }
+        header, .panel { background: #fff; border: 1px solid #dfe5ef; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+        h1, h2, p { margin-top: 0; }
+        .kpis, .board { display: grid; gap: 12px; }
+        .kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+        .kpi { background: #eef3ff; border-radius: 10px; padding: 12px; }
+        .kpi strong { display: block; font-size: 1.5rem; }
+        .board { grid-template-columns: repeat(4, minmax(240px, 1fr)); overflow-x: auto; }
+        .column { min-width: 240px; background: #edf1f7; border-radius: 12px; padding: 12px; }
+        .task { background: #fff; border: 1px solid #dfe5ef; border-left: 4px solid #6b7cff; border-radius: 10px; padding: 12px; margin-top: 10px; }
+        .task h3 { margin: 0 0 8px; font-size: 1rem; }
+        .meta { color: #5b667a; font-size: .85rem; }
+        label { margin-right: 8px; }
+        select { padding: 8px; border: 1px solid #cbd4e1; border-radius: 8px; background: white; }
+        @media (max-width: 900px) { .board { grid-template-columns: repeat(4, 280px); } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Toán Lão Sư — Project Management Board</h1>
+        <p>Dữ liệu nguồn: <code>docs/assets/pm-board/pm-board.js</code></p>
+        <label for="module-filter">Module</label>
+        <select id="module-filter"><option value="all">Tất cả</option></select>
+    </header>
+    <section class="kpis" id="kpis"></section>
+    <section class="panel">
+        <h2>Phase</h2>
+        <div id="phases"></div>
+    </section>
+    <main class="board" id="board"></main>
+    <script src="assets/pm-board/pm-board.js"></script>
+    <script>
+        const statuses = ['backlog', 'ready', 'in_progress', 'review', 'testing', 'done', 'blocked'];
+        const visibleColumns = [
+            { id: 'backlog', label: 'Backlog' },
+            { id: 'ready', label: 'Ready' },
+            { id: 'active', label: 'Active / Review', statuses: ['in_progress', 'review', 'testing'] },
+            { id: 'done', label: 'Done / Blocked', statuses: ['done', 'blocked'] },
+        ];
+        const data = window.PM_BOARD_DATA;
+        const filter = document.querySelector('#module-filter');
+        const modules = [...new Set(data.tasks.map(task => task.module))].sort();
+        modules.forEach(module => filter.add(new Option(module, module)));
+
+        function render() {
+            const tasks = data.tasks.filter(task => filter.value === 'all' || task.module === filter.value);
+            const done = tasks.filter(task => task.status === 'done').length;
+            const active = tasks.filter(task => ['in_progress', 'review', 'testing'].includes(task.status)).length;
+            document.querySelector('#kpis').innerHTML = [
+                ['Tổng task', tasks.length], ['Hoàn thành', done], ['Đang xử lý/review', active],
+                ['Tiến độ', tasks.length ? Math.round(done / tasks.length * 100) + '%' : '0%'],
+            ].map(([label, value]) => `<div class="kpi"><span>${label}</span><strong>${value}</strong></div>`).join('');
+
+            document.querySelector('#phases').innerHTML = data.phases.map(phase => {
+                const phaseTasks = tasks.filter(task => task.phase === phase.id);
+                const phaseDone = phaseTasks.filter(task => task.status === 'done').length;
+                return `<p><strong>${phase.name}</strong> — ${phaseDone}/${phaseTasks.length} task hoàn thành. ${phase.description}</p>`;
+            }).join('');
+
+            document.querySelector('#board').innerHTML = visibleColumns.map(column => {
+                const accepted = column.statuses || [column.id];
+                const cards = tasks.filter(task => accepted.includes(task.status)).map(task => `
+                    <article class="task">
+                        <h3>${task.id} — ${task.title}</h3>
+                        <p>${task.description}</p>
+                        <div class="meta">${task.module} · ${task.priority} · ${task.status}</div>
+                        <div class="meta">Dependency: ${task.dependencies.join(', ') || 'Không'}</div>
+                    </article>`).join('');
+                return `<section class="column"><strong>${column.label}</strong>${cards || '<p class="meta">Không có task</p>'}</section>`;
+            }).join('');
+        }
+
+        filter.addEventListener('change', render);
+        render();
+    </script>
+</body>
+</html>
+

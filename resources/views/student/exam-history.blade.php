@@ -1,0 +1,5 @@
+@php($title = $exam->title.' · Lịch sử')
+
+<x-layouts.app :title="$title">
+    <div class="space-y-6"><header><p class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Exam history</p><h1 class="mt-2 text-3xl font-semibold tracking-tight">Lịch sử bài thi</h1><p class="mt-2 text-sm text-slate-600">{{ $exam->title }}</p></header><section class="overflow-hidden rounded-3xl border border-slate-200 bg-white"><div class="divide-y divide-slate-100">@forelse ($attempts as $attempt)<div class="flex flex-wrap items-center justify-between gap-4 p-5"><div><p class="font-semibold">Lần thi {{ $attempt->attempt_number }}</p><p class="mt-1 text-sm text-slate-500">{{ $attempt->started_at?->format('d/m/Y H:i') }} · {{ $attempt->status }}</p></div><div class="flex items-center gap-4"><span class="text-sm font-semibold">{{ $attempt->score ?? 'Chưa có điểm' }}</span><a href="{{ route('student.exam.result', $attempt) }}" class="text-sm font-semibold text-brand-600">Xem review →</a></div></div>@empty<div class="p-8 text-center text-sm text-slate-500">Chưa có lần thi nào.</div>@endforelse</div></section></div>
+</x-layouts.app>
