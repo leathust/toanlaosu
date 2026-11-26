@@ -14,7 +14,7 @@ class VisualScene extends Model
     /** @use HasFactory<VisualSceneFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['public_id', 'name', 'engine', 'scene_key', 'status', 'published_version_id', 'created_by', 'updated_by'];
+    protected $fillable = ['public_id', 'name', 'engine', 'scene_key', 'status', 'published_version_id', 'created_by', 'updated_by', 'assigned_reviewer_id'];
 
     public function versions(): HasMany
     {
@@ -29,6 +29,11 @@ class VisualScene extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function assignedReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_reviewer_id');
     }
 
     public function updater(): BelongsTo

@@ -2,6 +2,14 @@
 
 return [
 
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'local'),
+        'api_key' => env('AI_API_KEY'),
+        'timeout_seconds' => (int) env('AI_TIMEOUT_SECONDS', 10),
+        'max_retries' => (int) env('AI_MAX_RETRIES', 2),
+        'circuit_breaker_threshold' => (int) env('AI_CIRCUIT_BREAKER_THRESHOLD', 3),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

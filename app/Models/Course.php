@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Course extends Model
@@ -15,7 +16,7 @@ class Course extends Model
     /** @use HasFactory<CourseFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['slug', 'title', 'summary', 'status', 'difficulty', 'estimated_minutes', 'published_at', 'created_by', 'updated_by'];
+    protected $fillable = ['slug', 'title', 'summary', 'status', 'difficulty', 'estimated_minutes', 'published_at', 'created_by', 'updated_by', 'assigned_reviewer_id'];
 
     protected function casts(): array
     {
@@ -43,9 +44,19 @@ class Course extends Model
         return $this->hasMany(Enrollment::class);
     }
 
+    public function activeEnrollments(): HasMany
+    {
+        return $this->enrollments()->activeAt(now());
+    }
+
     public function units(): HasMany
     {
         return $this->hasMany(Unit::class)->orderBy('sort_order');
+    }
+
+    public function lessons(): HasManyThrough
+    {
+        return $this->hasManyThrough(Lesson::class, Unit::class);
     }
 
     public function creator(): BelongsTo
@@ -56,5 +67,10 @@ class Course extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function assignedReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_reviewer_id');
     }
 }

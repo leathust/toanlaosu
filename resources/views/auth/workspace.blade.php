@@ -1,5 +1,40 @@
-@php($title = 'Chọn workspace · Toán Lão Sư')
+@php($title = 'Workspace · Toán Lão Sư')
 
 <x-layouts.auth :title="$title">
-    <div class="mx-auto max-w-2xl"><x-ui.badge variant="brand">Workspace switcher</x-ui.badge><h1 class="mt-4 text-3xl font-semibold tracking-tight">Bạn muốn làm gì hôm nay?</h1><p class="mt-3 text-sm leading-6 text-slate-600">Sau khi đăng nhập, hệ thống sẽ chỉ hiển thị workspace mà tài khoản được cấp quyền.</p><x-ui.alert variant="info" title="Prototype UI" class="mt-6">Các lựa chọn dưới đây minh họa role-aware redirect; quyền thật sẽ được kiểm tra ở server.</x-ui.alert><div class="mt-6 grid gap-3 sm:grid-cols-3"><a href="{{ route('ui.prototype') }}" class="group rounded-2xl border border-brand-200 bg-brand-50 p-5 transition hover:-translate-y-0.5 hover:shadow-md"><span class="flex size-11 items-center justify-center rounded-2xl bg-white text-xl text-brand-600">◎</span><h2 class="mt-5 font-semibold text-brand-950">Học sinh</h2><p class="mt-2 text-xs leading-5 text-brand-800">Tiếp tục bài học, luyện tập và xem lịch thi.</p><span class="mt-5 block text-sm font-semibold text-brand-700">Mở workspace →</span></a><div class="rounded-2xl border border-slate-200 p-5 opacity-70"><span class="flex size-11 items-center justify-center rounded-2xl bg-slate-100 text-xl text-slate-600">✎</span><h2 class="mt-5 font-semibold">Giáo viên</h2><p class="mt-2 text-xs leading-5 text-slate-500">Soạn nội dung trong phạm vi được giao.</p><span class="mt-5 block text-xs font-semibold text-slate-500">Cần quyền teacher</span></div><div class="rounded-2xl border border-slate-200 p-5 opacity-70"><span class="flex size-11 items-center justify-center rounded-2xl bg-slate-100 text-xl text-slate-600">⚙</span><h2 class="mt-5 font-semibold">Admin</h2><p class="mt-2 text-xs leading-5 text-slate-500">Vận hành tài khoản, nội dung và hệ thống.</p><span class="mt-5 block text-xs font-semibold text-slate-500">Cần quyền admin</span></div></div><p class="mt-6 text-xs text-slate-400">Nếu không thấy workspace cần thiết, liên hệ Admin để kiểm tra role và phạm vi truy cập.</p></div>
+    <div class="mx-auto max-w-3xl">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <x-ui.badge variant="brand">Workspace của bạn</x-ui.badge>
+                <h1 class="mt-4 text-3xl font-semibold tracking-tight">Chọn không gian làm việc</h1>
+                <p class="mt-3 text-sm leading-6 text-slate-600">Bạn chỉ nhìn thấy những workspace được cấp trực tiếp cho tài khoản này.</p>
+            </div>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500">Đăng xuất</button>
+            </form>
+        </div>
+
+        @if (count($workspaces) > 1)
+            <x-ui.alert variant="info" title="Bạn có nhiều quyền truy cập" class="mt-6">Chọn đúng workspace cho công việc bạn muốn làm. Mọi quyền vẫn được kiểm tra lại ở server.</x-ui.alert>
+        @endif
+
+        @if (count($workspaces) > 0)
+            <div class="mt-6 grid gap-4 {{ count($workspaces) === 1 ? 'sm:grid-cols-1' : (count($workspaces) === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3') }}" aria-label="Workspace được cấp quyền">
+                @foreach ($workspaces as $workspace)
+                    <a href="{{ route($workspace['route']) }}" class="group rounded-3xl border p-5 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500 {{ $workspace['classes'] }}">
+                        <span class="flex size-11 items-center justify-center rounded-2xl bg-white text-xl shadow-sm" aria-hidden="true">{{ $workspace['icon'] }}</span>
+                        <h2 class="mt-5 text-lg font-semibold">{{ $workspace['label'] }}</h2>
+                        <p class="mt-2 text-sm leading-6 opacity-80">{{ $workspace['description'] }}</p>
+                        <span class="mt-5 block text-sm font-semibold">Mở workspace <span aria-hidden="true">→</span></span>
+                    </a>
+                @endforeach
+            </div>
+        @else
+            <x-ui.alert variant="warning" title="Tài khoản chưa được cấp workspace" class="mt-6" role="status">
+                Tài khoản của bạn đang hoạt động nhưng chưa có role phù hợp. Vui lòng liên hệ Admin hoặc bộ phận hỗ trợ để được cấp quyền.
+            </x-ui.alert>
+        @endif
+
+        <p class="mt-6 text-xs leading-5 text-slate-500">Đang đăng nhập với <span class="font-semibold text-slate-700">{{ auth()->user()->email }}</span>. Nếu bạn cho rằng quyền truy cập chưa đúng, hãy liên hệ Admin.</p>
+    </div>
 </x-layouts.auth>

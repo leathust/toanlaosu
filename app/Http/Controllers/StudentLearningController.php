@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Scenes\ValidateSceneConfiguration;
+use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Lesson;
 use App\Models\LessonBlock;
 use App\Models\LessonBlockProgress;
 use App\Models\QuestionVersion;
@@ -11,9 +14,97 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class StudentLearningController extends Controller
 {
+    public function inertiaDashboard(Request $request): Response
+    {
+        $user = $request->user();
+        $enrollments = Enrollment::query()
+            ->with('course.units.lessons')
+            ->where('user_id', $user->id)
+            ->activeAt(now())
+            ->latest('id')
+            ->get();
+
+        $courses = $enrollments->map(function (Enrollment $enrollment) use ($user): array {
+            $course = $enrollment->course;
+            $lessonIds = $course->units->flatMap(fn ($unit) => $unit->lessons->pluck('id'));
+            $totalBlocks = LessonBlock::query()->whereIn('lesson_id', $lessonIds)->count();
+            $completedBlocks = LessonBlockProgress::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'completed')
+                ->whereHas('lessonBlock', fn ($query) => $query->whereIn('lesson_id', $lessonIds))
+                ->count();
+
+            return [
+                'slug' => $course->slug,
+                'title' => $course->title,
+                'summary' => $course->summary,
+                'difficulty' => $course->difficulty,
+                'period' => $enrollment->period_number,
+                'progress' => $totalBlocks > 0 ? (int) round(($completedBlocks / $totalBlocks) * 100) : 0,
+                'lessons' => $course->units->flatMap(fn ($unit) => $unit->lessons->map(fn ($lesson) => [
+                    'slug' => $lesson->slug,
+                    'title' => $lesson->title,
+                    'unit' => $unit->title,
+                ]))->values()->all(),
+            ];
+        })->values()->all();
+
+        return Inertia::render('Student/LearningDashboard', [
+            'student' => ['name' => $user->name],
+            'courses' => $courses,
+        ]);
+    }
+
+    public function inertiaLesson(Request $request, Course $course, Lesson $lesson, ValidateSceneConfiguration $sceneValidator): Response
+    {
+        $lesson->loadMissing(['unit', 'blocks.question.publishedVersion.options', 'blocks.visualScene.publishedVersion']);
+        abort_unless($lesson->unit?->course_id === $course->id, 404);
+        abort_unless(Enrollment::query()->where('user_id', $request->user()->id)->where('course_id', $course->id)->activeAt(now())->exists(), 403);
+
+        $progress = LessonBlockProgress::query()
+            ->where('user_id', $request->user()->id)
+            ->whereIn('lesson_block_id', $lesson->blocks->pluck('id'))
+            ->get()
+            ->keyBy('lesson_block_id');
+
+        return Inertia::render('Student/Lesson', [
+            'course' => ['slug' => $course->slug, 'title' => $course->title],
+            'lesson' => [
+                'slug' => $lesson->slug,
+                'title' => $lesson->title,
+                'summary' => $lesson->summary,
+                'blocks' => $lesson->blocks->map(fn (LessonBlock $block): array => [
+                    'id' => $block->id,
+                    'type' => $block->block_type,
+                    'body' => $block->body,
+                    'settings' => $block->settings,
+                    'completed' => $progress->get($block->id)?->status === 'completed',
+                    'question' => $block->question?->publishedVersion ? [
+                        'id' => $block->question->publishedVersion->id,
+                        'stem' => $block->question->publishedVersion->stem,
+                        'type' => $block->question->publishedVersion->answer_config['type'] ?? $block->question->question_type,
+                        'options' => $block->question->publishedVersion->options->map(fn ($option): array => ['key' => $option->option_key, 'content' => $option->content])->values()->all(),
+                    ] : null,
+                    'scene' => $block->visualScene?->publishedVersion ? [
+                        'public_id' => $block->visualScene->public_id,
+                        'name' => $block->visualScene->name,
+                        'scene_key' => $block->visualScene->scene_key,
+                        'schema_version' => $block->visualScene->publishedVersion->schema_version,
+                        'config' => $sceneValidator->execute($block->visualScene->publishedVersion->config, $block->visualScene->publishedVersion->allowed_commands ?? []),
+                        'steps' => $block->visualScene->publishedVersion->steps ?? [],
+                        'allowed_commands' => $block->visualScene->publishedVersion->allowed_commands ?? [],
+                        'fallback' => $block->visualScene->publishedVersion->fallback_path ? ['disk' => $block->visualScene->publishedVersion->fallback_disk, 'path' => $block->visualScene->publishedVersion->fallback_path] : null,
+                    ] : null,
+                ])->values()->all(),
+            ],
+        ]);
+    }
+
     public function dashboard(Request $request): View
     {
         if (! $request->user()) {

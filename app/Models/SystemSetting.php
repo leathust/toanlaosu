@@ -19,6 +19,20 @@ class SystemSetting extends Model
         return ['value' => 'json'];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public static function schema(): array
+    {
+        return [
+            'ai.enabled' => 'boolean',
+            'ai.daily_budget' => 'integer',
+            'audit_retention_months' => 'integer',
+            'exam_retention_years' => 'integer',
+            'ai_vector_search_enabled' => 'boolean',
+        ];
+    }
+
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');

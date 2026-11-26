@@ -21,6 +21,11 @@ class Exam extends Model
         return ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'result_release_at' => 'datetime', 'answer_release_at' => 'datetime', 'randomize_questions' => 'boolean', 'randomize_options' => 'boolean'];
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\EnrollmentFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,5 +38,23 @@ class Enrollment extends Model
     public function granter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'granted_by');
+    }
+
+    public function scopeActiveAt(Builder $query, CarbonInterface $at): Builder
+    {
+        return $query
+            ->where('status', 'active')
+            ->whereNull('revoked_at')
+            ->where(function (Builder $query) use ($at): void {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', $at);
+            })
+            ->where(function (Builder $query) use ($at): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', $at);
+            });
+    }
+
+    public function isActiveAt(?CarbonInterface $at = null): bool
+    {
+        return self::query()->whereKey($this->getKey())->activeAt($at ?? now())->exists();
     }
 }

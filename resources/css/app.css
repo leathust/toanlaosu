@@ -44,3 +44,12 @@
         }
     }
 }
+
+@media (max-width: 639px) {
+    select,
+    input,
+    textarea {
+        max-width: 100%;
+        min-width: 0;
+    }
+}

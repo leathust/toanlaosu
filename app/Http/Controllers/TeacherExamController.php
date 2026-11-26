@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Exam;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,7 +12,7 @@ class TeacherExamController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->ensureTeacher($request->user());
+        $this->authorize('viewAny', Exam::class);
         $exams = Exam::query()
             ->with('course')
             ->whereHas('course.teachers', function (Builder $query) use ($request): void {
@@ -27,7 +26,7 @@ class TeacherExamController extends Controller
 
     public function show(Request $request, Exam $exam): View
     {
-        $this->ensureExamAccess($request->user(), $exam);
+        $this->authorize('view', $exam);
         $exam->load('course', 'versions.questions.questionVersion');
 
         return view('teacher.exam', compact('exam'));
@@ -35,7 +34,7 @@ class TeacherExamController extends Controller
 
     public function exportLatex(Request $request, Exam $exam): Response
     {
-        $this->ensureExamAccess($request->user(), $exam);
+        $this->authorize('view', $exam);
         $exam->load('versions.questions.questionVersion');
         $version = $exam->versions->sortByDesc('version')->first();
         $lines = ['\\documentclass{article}', '\\usepackage{amsmath}', '\\begin{document}', '\\section*{'.self::escapeLatex($exam->title).'}'];
@@ -49,23 +48,12 @@ class TeacherExamController extends Controller
 
     public function report(Request $request, Exam $exam): View
     {
-        $this->ensureExamAccess($request->user(), $exam);
+        $this->authorize('view', $exam);
         $attempts = $exam->versions()->with('attempts.user')->get()->flatMap->attempts;
         $submitted = $attempts->where('status', 'submitted');
         $average = $submitted->avg(fn ($attempt): float => (float) $attempt->score);
 
         return view('teacher.exam-report', ['exam' => $exam, 'attempts' => $attempts, 'submittedCount' => $submitted->count(), 'averageScore' => $average]);
-    }
-
-    private function ensureTeacher(User $user): void
-    {
-        abort_unless($user->roles()->where('name', 'teacher')->exists(), 403);
-    }
-
-    private function ensureExamAccess(User $user, Exam $exam): void
-    {
-        $this->ensureTeacher($user);
-        abort_unless($exam->course_id && $user->teachingCourses()->whereKey($exam->course_id)->wherePivotNull('revoked_at')->exists(), 403);
     }
 
     private static function escapeLatex(string $value): string

@@ -23,6 +23,7 @@ class QuestionVersionFactory extends Factory
             'version' => 1,
             'stem' => fake()->paragraph(),
             'solution' => fake()->optional()->paragraph(),
+            'solution_blocks' => null,
             'answer_config' => ['type' => 'single_choice'],
             'scoring_policy' => ['points' => 1],
             'allow_negative' => false,

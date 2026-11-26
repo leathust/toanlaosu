@@ -253,13 +253,15 @@ Autosave dùng optimistic version (`save_version`) và unique row cho mỗi `exa
 | --- | --- | --- | --- |
 | `ai_knowledge_documents` | `source_type`, `source_id`, `source_version`, `title`, `checksum`, `status`, `provider`, `provider_document_id`, `indexed_at`, `error_message`, `metadata JSON` | unique `(source_type, source_id, source_version)`, index `(status, updated_at)`, index `(checksum)` | Reindex/retire có kiểm soát |
 | `ai_knowledge_chunks` | `document_id`, `chunk_index`, `content LONGTEXT`, `token_count`, `content_hash`, `external_vector_id`, `metadata JSON` | unique `(document_id, chunk_index)`, index `(content_hash)`, optional fulltext sau benchmark | Cascade khi document chưa được cite; otherwise restrict/archive |
-| `chat_threads` | `public_id ULID`, `user_id`, `course_id nullable`, `lesson_id nullable`, `question_version_id nullable`, `lesson_block_id nullable`, `mode`, `status`, `title`, `last_message_at`, `retention_expires_at`, `metadata JSON`, `deleted_at` | `public_id unique`, index `(user_id, status, last_message_at)`, index `(retention_expires_at)` | Soft delete; source refs restrict |
+| `chat_threads` | `public_id ULID`, `user_id`, `course_id nullable`, `lesson_id nullable`, `lesson_block_id nullable`, `question_version_id nullable`, `visual_scene_version_id nullable`, `context_kind`, `mode`, `status`, `title`, `last_message_at`, `retention_expires_at`, `metadata JSON`, `deleted_at` | `public_id unique`, index `(user_id, context_kind, status, last_message_at)`, index `(visual_scene_version_id)`, index `(retention_expires_at)` | Soft delete; source refs restrict |
 | `chat_messages` | `chat_thread_id`, `parent_id nullable`, `role`, `status`, `content LONGTEXT`, `model`, `provider_message_id`, `tool_calls JSON`, `prompt_tokens`, `completion_tokens`, `latency_ms`, `error_code`, `created_at` | index `(chat_thread_id, created_at, id)`, optional unique provider message ID | Thread restrict; append-only |
 | `chat_message_sources` | `chat_message_id`, `ai_knowledge_chunk_id`, `citation_order`, `label`, `quoted_excerpt TEXT nullable`, `metadata JSON` | unique `(chat_message_id, citation_order)`, unique `(chat_message_id, ai_knowledge_chunk_id)` | Restrict citation integrity |
 | `ai_usage_logs` | `user_id nullable`, `chat_message_id nullable`, `provider`, `model`, `operation`, `status`, `prompt_tokens`, `completion_tokens`, `cost`, `latency_ms`, `error_code`, `occurred_at`, `retention_expires_at` | index `(user_id, occurred_at)`, `(provider, model, occurred_at)`, `(status, occurred_at)`, `(retention_expires_at)` | User/message nullOnDelete; automatic retention |
 | `ai_feedback` | `chat_message_id`, `user_id`, `rating`, `reason`, `comment`, `reviewed_by`, `reviewed_at` | unique `(chat_message_id, user_id)`, index `(rating, reviewed_at)` | User/reviewer nullOnDelete; message restrict |
 
 Không lưu API key trong các bảng này. Secret phải nằm trong environment/secret store và được truy cập qua config.
+
+`chat_threads` có một context chính thuộc `course`, `lesson`, `lesson_block`, `question_version` hoặc `visual_scene_version`; `context_kind` phải khớp với foreign key tương ứng và service phải kiểm tra các reference cùng scope course/lesson. Question và scene luôn pin vào version. Video/material được truy xuất qua `lesson_block` và knowledge metadata, không thêm foreign key trực tiếp ở MVP. `mode=exam` bị chặn ở server; teacher authoring dùng mode riêng, không dùng chung thread Student Tutor.
 
 ### 8.9. Vận hành và audit
 
@@ -520,6 +522,8 @@ Số test/assertion chỉ cập nhật dashboard sau khi các lệnh thật sự
 | AI search | Triển khai tìm kiếm văn bản/full-text trước; vector search để giai đoạn sau. |
 | Audit retention | Tự động giữ 6 tháng. |
 | Exam retention | `exam_attempts`, `exam_attempt_answers` và event liên quan giữ 1 năm. |
+| AI context binding | Chatbot gắn với course/lesson/lesson block/question version/visual scene version; video/material đi qua lesson block; exam bị vô hiệu hóa; teacher authoring dùng mode riêng. |
+| AI voice | MVP dùng text; mở rộng voice input qua Speech-to-Text rồi voice output qua Text-to-Speech. Transcript lưu ở `chat_messages.content`, audio tạm thời ở object storage theo retention; exam chặn cả voice input/output. |
 
 ## 26. Checklist hoàn tất `DB-010`
 

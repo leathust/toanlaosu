@@ -14,11 +14,11 @@ class QuestionVersion extends Model
     /** @use HasFactory<QuestionVersionFactory> */
     use HasFactory;
 
-    protected $fillable = ['question_id', 'version', 'stem', 'solution', 'answer_config', 'scoring_policy', 'allow_negative', 'content_hash', 'status', 'published_at', 'created_by'];
+    protected $fillable = ['question_id', 'version', 'stem', 'solution', 'solution_blocks', 'answer_config', 'scoring_policy', 'allow_negative', 'content_hash', 'status', 'published_at', 'created_by'];
 
     protected function casts(): array
     {
-        return ['answer_config' => 'array', 'scoring_policy' => 'array', 'allow_negative' => 'boolean', 'published_at' => 'datetime'];
+        return ['answer_config' => 'array', 'solution_blocks' => 'array', 'scoring_policy' => 'array', 'allow_negative' => 'boolean', 'published_at' => 'datetime'];
     }
 
     public function question(): BelongsTo

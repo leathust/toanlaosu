@@ -13,7 +13,7 @@
                     <article id="question-{{ $question->id }}" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-exam-question data-question-id="{{ $question->id }}" data-save-version="{{ $attempt->save_version }}">
                         <div class="flex items-start justify-between gap-4"><h2 class="font-semibold">Câu {{ $index + 1 }}</h2><span data-answer-state class="text-xs text-slate-500">Chưa trả lời</span></div>
                         <p class="mt-4 leading-7 text-slate-700">{{ $question->snapshot['stem'] ?? 'Nội dung câu hỏi đang được chuẩn bị.' }}</p>
-                        <textarea data-answer-input class="mt-4 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" placeholder="Nhập câu trả lời..."></textarea>
+                        <textarea data-answer-input class="mt-4 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" placeholder="Nhập câu trả lời...">{{ $question->answer?->answer['value'] ?? '' }}</textarea>
                         <button data-save-answer type="button" class="mt-3 min-h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700">Lưu đáp án</button>
                     </article>
                 @endforeach

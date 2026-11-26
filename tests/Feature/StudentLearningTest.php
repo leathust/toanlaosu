@@ -36,6 +36,47 @@ it('loads an authenticated dashboard from active enrollments', function () {
         ->assertSee('1 khóa');
 });
 
+it('loads the real Inertia learning dashboard from active enrollments', function () {
+    $fixture = learningFixture();
+
+    $response = $this->withHeaders([
+        'X-Inertia' => 'true',
+        'X-Requested-With' => 'XMLHttpRequest',
+        'X-Inertia-Version' => hash_file('xxh128', public_path('build/manifest.json')),
+    ])->actingAs($fixture['user'])->get(route('student.learning.dashboard'));
+
+    $response->assertOk()
+        ->assertHeader('X-Inertia', 'true')
+        ->assertJsonPath('component', 'Student/LearningDashboard')
+        ->assertJsonPath('props.courses.0.slug', $fixture['course']->slug)
+        ->assertJsonPath('props.courses.0.lessons.0.slug', $fixture['lesson']->slug);
+});
+
+it('loads an enrollment-scoped lesson through the Inertia route', function () {
+    $fixture = learningFixture();
+    $fixture['block']->update(['block_type' => 'note', 'body' => '<p>Khoảng cách tới radar.</p>']);
+
+    $response = $this->withHeaders([
+        'X-Inertia' => 'true',
+        'X-Requested-With' => 'XMLHttpRequest',
+        'X-Inertia-Version' => hash_file('xxh128', public_path('build/manifest.json')),
+    ])->actingAs($fixture['user'])->get(route('student.learning.lesson', [$fixture['course']->slug, $fixture['lesson']->slug]));
+
+    $response->assertOk()
+        ->assertJsonPath('component', 'Student/Lesson')
+        ->assertJsonPath('props.lesson.blocks.0.type', 'note')
+        ->assertJsonPath('props.lesson.blocks.0.completed', false);
+});
+
+it('does not expose an enrolled lesson to another student', function () {
+    $fixture = learningFixture();
+    $otherUser = User::factory()->create();
+
+    $this->actingAs($otherUser)
+        ->get(route('student.learning.lesson', [$fixture['course']->slug, $fixture['lesson']->slug]))
+        ->assertForbidden();
+});
+
 it('records block completion idempotently for an enrolled student', function () {
     $fixture = learningFixture();
 

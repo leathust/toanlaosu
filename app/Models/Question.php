@@ -14,7 +14,7 @@ class Question extends Model
     /** @use HasFactory<QuestionFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['public_id', 'owner_id', 'question_type', 'status', 'difficulty', 'published_version_id', 'created_by', 'updated_by'];
+    protected $fillable = ['public_id', 'owner_id', 'question_type', 'status', 'difficulty', 'published_version_id', 'created_by', 'updated_by', 'assigned_reviewer_id'];
 
     public function owner(): BelongsTo
     {
@@ -29,6 +29,11 @@ class Question extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function assignedReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_reviewer_id');
     }
 
     public function versions(): HasMany
